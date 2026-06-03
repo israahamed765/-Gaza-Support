@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "BeneficiaryProfile": {
+      "title": "BeneficiaryProfile",
+      "description": "Information about a resilient family",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "profilePicture": { "type": "string" },
+        "description": { "type": "string" },
+        "totalDonated": { "type": "number" },
+        "totalSpent": { "type": "number" },
+        "password": { "type": "string" },
+        "initialized": { "type": "boolean" },
+        "crowdfundingUrl": { "type": "string" }
+      },
+      "required": ["id", "password"]
+    },
+    "UrgentNeed": {
+      "title": "UrgentNeed",
+      "description": "An itemized or general urgent need for a family",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "beneficiaryId": { "type": "string" },
+        "beneficiaryName": { "type": "string" },
+        "beneficiaryLocation": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "cost": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "crowdfundingUrl": { "type": "string" },
+        "collectedAmount": { "type": "number" },
+        "isUrgent": { "type": "boolean" }
+      },
+      "required": ["id", "beneficiaryId", "title", "cost"]
+    },
+    "Challenge": {
+      "title": "Challenge",
+      "description": "A daily challenge, survival update or diary entry published by a family",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "beneficiaryId": { "type": "string" },
+        "beneficiaryName": { "type": "string" },
+        "beneficiaryAvatar": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "likes": { "type": "number" }
+      },
+      "required": ["id", "beneficiaryId", "title", "text"]
+    },
+    "HopeMessage": {
+      "title": "HopeMessage",
+      "description": "A letter or sticky note of love and hope left on the Wall of Hope",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "country": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "message"]
+    },
+    "SanadNotification": {
+      "title": "SanadNotification",
+      "description": "A real-time notification alert dispatched of solidarity updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "messageAr": { "type": "string" },
+        "messageEn": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "type", "titleAr", "messageAr"]
+    }
+  },
+  "firestore": {
+    "/beneficiaries/{beneficiaryId}": {
+      "schema": "BeneficiaryProfile",
+      "description": "Collection of available/registered family entities"
+    },
+    "/currentNeeds/{needId}": {
+      "schema": "UrgentNeed",
+      "description": "Collection of all urgent itemized needs across families"
+    },
+    "/challenges/{challengeId}": {
+      "schema": "Challenge",
+      "description": "Collection of all daily challenge survival logs"
+    },
+    "/hopeMessages/{messageId}": {
+      "schema": "HopeMessage",
+      "description": "Global Wall of Hope messages"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "SanadNotification",
+      "description": "Real-time activity and donation notifications"
+    }
+  }
+}

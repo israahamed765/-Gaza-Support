@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global catch-all safety fallback
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper: Valid ID check
+    function isValidId(id) { 
+      return id is string && id.size() <= 128; 
+    }
+
+    // 1. Beneficiaries (Families)
+    match /beneficiaries/{beneficiaryId} {
+      allow read: if true;
+      allow create: if isValidId(beneficiaryId);
+      allow update: if isValidId(beneficiaryId);
+      allow delete: if isValidId(beneficiaryId);
+    }
+
+    // 2. Urgent Needs
+    match /currentNeeds/{needId} {
+      allow read: if true;
+      allow create: if isValidId(needId);
+      allow update: if isValidId(needId);
+      allow delete: if isValidId(needId);
+    }
+
+    // 3. Challenges
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow create: if isValidId(challengeId);
+      allow update: if isValidId(challengeId);
+      allow delete: if isValidId(challengeId);
+    }
+
+    // 4. Hope Messages
+    match /hopeMessages/{messageId} {
+      allow read: if true;
+      allow create: if isValidId(messageId);
+    }
+
+    // 5. Notifications
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow create: if isValidId(notificationId);
+      allow update: if isValidId(notificationId);
+      allow delete: if isValidId(notificationId);
+    }
+  }
+}

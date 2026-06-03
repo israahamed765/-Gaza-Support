@@ -1,0 +1,8 @@
+{
+  "name": "Sanad Gaza",
+  "description": "سند غزة - منصة التكافل والشفافية والتكافل والمساندة المباشرة للعائلات في قطاع غزة",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
