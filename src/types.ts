@@ -1,5 +1,6 @@
 export interface BeneficiaryProfile {
   id: string;
+  username?: string;      // اسم المستخدم الفريد للروابط الديناميكية
   name: string;
   location: string;
   profilePicture: string; // Base64 or standard asset/Unsplash URL
@@ -9,6 +10,7 @@ export interface BeneficiaryProfile {
   password: string;       // كلمة سر الدخول للمستفيد
   initialized: boolean;   // هل قام المستفيد بإدخال بياناته الحقيقية؟
   crowdfundingUrl?: string; // رابط الحملة الفردية للعائلة
+  dashboardSlug?: string;   // الرابط الآمن والغير قابل للتخمين للوحة الاستقبال والتحكم
 }
 
 export interface Comment {
@@ -39,6 +41,7 @@ export interface Challenge {
   title: string;
   text: string;
   imageUrl: string;
+  imageUrls?: string[];
   likes: number;
   comments?: Comment[];
 }
@@ -52,6 +55,7 @@ export interface UrgentNeed {
   description: string;
   cost: number;
   imageUrl: string;
+  imageUrls?: string[];
   crowdfundingUrl: string;
   collectedAmount: number;
   isUrgent: boolean;

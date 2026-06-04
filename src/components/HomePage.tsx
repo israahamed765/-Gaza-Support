@@ -1,6 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSanad } from '../context/SanadContext';
-import { Heart, Activity, Users, ShieldCheck, HeartHandshake, ChevronLeft, Calendar, ArrowUpRight, CheckCircle2, TrendingUp, Sparkles, MapPin, Coins, ChevronRight } from 'lucide-react';
+import { Heart, Activity, Users, User, ShieldCheck, HeartHandshake, ChevronLeft, Calendar, ArrowUpRight, CheckCircle2, TrendingUp, Sparkles, MapPin, Coins, ChevronRight } from 'lucide-react';
 import { translations } from '../translations';
 
 export const HomePage: React.FC = () => {
@@ -11,15 +12,18 @@ export const HomePage: React.FC = () => {
     setActiveTab, 
     selectedFamilyId, 
     setSelectedFamilyId,
+    selectedFamily,
+    currentBeneficiary,
     language
   } = useSanad();
 
   const t = translations[language];
   const isEn = language === 'en';
+  const navigate = useNavigate();
 
   // Find currently active viewed family amongst initialized ones
   const initializedBeneficiaries = beneficiaries.filter(b => b.initialized);
-  const selectedFamily = initializedBeneficiaries.find(b => b.id === selectedFamilyId) || initializedBeneficiaries[0];
+  const remainingAmount = selectedFamily ? (typeof selectedFamily.totalDonated === 'number' ? selectedFamily.totalDonated : 0) - (typeof selectedFamily.totalSpent === 'number' ? selectedFamily.totalSpent : 0) : 0;
 
   // Fallback if somehow there's an issue finding the family
   const familyName = selectedFamily && selectedFamily.name ? selectedFamily.name : t.home_family_fallback_name;
@@ -28,7 +32,6 @@ export const HomePage: React.FC = () => {
   const familyDesc = selectedFamily && selectedFamily.description ? selectedFamily.description : t.home_family_fallback_desc;
   const totalDonated = selectedFamily && typeof selectedFamily.totalDonated === 'number' ? selectedFamily.totalDonated : 0;
   const totalSpent = selectedFamily && typeof selectedFamily.totalSpent === 'number' ? selectedFamily.totalSpent : 0;
-  const remainingAmount = totalDonated - totalSpent;
 
   // Filter Needs & Challenges dynamically based on the selected single family!
   const filteredNeeds = currentNeeds.filter(n => n.beneficiaryId === (selectedFamily?.id || ''));
@@ -99,8 +102,8 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Selected Family Switcher Dropdown (Only appears if there are multiple initialized profiles) */}
-        {initializedBeneficiaries.length > 1 && (
+        {/* Selected Family Switcher Dropdown (Only appears if there are multiple initialized profiles and no user is logged in) */}
+        {!currentBeneficiary && initializedBeneficiaries.length > 1 && (
           <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/55 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in" id="home_family_dropdown_container">
             <span className="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-2">
               <Users className="w-4 h-4 text-emerald-600" />
@@ -153,28 +156,35 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
-              {selectedFamily && selectedFamily.crowdfundingUrl ? (
-                <a
-                  href={selectedFamily.crowdfundingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-5 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition rounded-xl text-xs sm:text-sm font-bold"
-                >
-                  <HeartHandshake className="w-4 h-4" />
-                  <span>{t.home_crowdfunding_btn}</span>
-                </a>
-              ) : (
-                <div className="text-xs text-slate-400 font-medium">
-                  {isEn ? 'No external crowdfunding campaign url provided yet.' : 'لم يتم إدراج رابط خارجي مخصص بعد من لوحة العائلة.'}
-                </div>
-              )}
-              
-              <button 
-                onClick={() => setActiveTab('dashboard')}
-                className="text-xs font-black text-emerald-600 hover:underline flex items-center gap-1"
-              >
-                <span>{isEn ? 'Update survival profile or family financial counts? Login ⟶' : 'هل أنت من أصحاب هذه العائلة؟ ادخل لتحديث بياناتك ←'}</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {selectedFamily && selectedFamily.crowdfundingUrl && (
+                  <a
+                    href={selectedFamily.crowdfundingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-3 bg-emerald-50 text-emerald-750 border border-emerald-200 hover:bg-emerald-100 transition rounded-xl text-xs sm:text-sm font-bold"
+                  >
+                    <HeartHandshake className="w-4 h-4 text-emerald-600" />
+                    <span>{t.home_crowdfunding_btn}</span>
+                  </a>
+                )}
+
+                {selectedFamily && (
+                  <button
+                    onClick={() => {
+                      if (selectedFamily.username) {
+                        navigate(`/user/${selectedFamily.username}`);
+                      } else {
+                        navigate(`/profile/${selectedFamily.id}`);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white transition rounded-xl text-xs sm:text-sm font-black shadow-xs cursor-pointer"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>{isEn ? 'View Dedicated Profile' : 'عرض الملف المستقل'}</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

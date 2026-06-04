@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SanadProvider, useSanad } from './context/SanadContext';
 import { HeaderNavbar } from './components/HeaderNavbar';
 import { HomePage } from './components/HomePage';
@@ -11,30 +12,14 @@ import { CurrentNeedsPage } from './components/CurrentNeedsPage';
 import { DailyChallengesPage } from './components/DailyChallengesPage';
 import { WallOfHopePage } from './components/WallOfHopePage';
 import { BeneficiaryDashboard } from './components/BeneficiaryDashboard';
-import { Heart, Globe, ShieldAlert, ArrowUp } from 'lucide-react';
+import { DynamicProfileView } from './components/DynamicProfileView';
+import { SecureDashboardLoader } from './components/SecureDashboardLoader';
+import { Heart, Globe, ArrowUp } from 'lucide-react';
 import { translations } from './translations';
 
 function SanadAppContent() {
-  const { activeTab, setActiveTab, language } = useSanad();
+  const { setActiveTab, language } = useSanad();
   const t = translations[language];
-
-  // Conditional rendering based on state routing tab
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'home':
-        return <HomePage />;
-      case 'needs':
-        return <CurrentNeedsPage />;
-      case 'challenges':
-        return <DailyChallengesPage />;
-      case 'hope':
-        return <WallOfHopePage />;
-      case 'dashboard':
-        return <BeneficiaryDashboard />;
-      default:
-        return <HomePage />;
-    }
-  };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -51,7 +36,23 @@ function SanadAppContent() {
 
       {/* 2. Main Content Wrapper */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        {renderTabContent()}
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/needs" element={<CurrentNeedsPage />} />
+          <Route path="/challenges" element={<DailyChallengesPage />} />
+          <Route path="/hope" element={<WallOfHopePage />} />
+          <Route path="/dashboard" element={<BeneficiaryDashboard />} />
+          
+          {/* Dynamic User Profile Links */}
+          <Route path="/profile/:id" element={<DynamicProfileView />} />
+          <Route path="/user/:username" element={<DynamicProfileView />} />
+          
+          {/* Private Secured Dashboard Links */}
+          <Route path="/dashboard/:slug" element={<SecureDashboardLoader />} />
+          
+          {/* Catch-all fallback redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* 3. Global Footer block */}
@@ -98,11 +99,6 @@ function SanadAppContent() {
                     {t.footer_hope_link}
                   </button>
                 </li>
-                <li>
-                  <button onClick={() => setActiveTab('dashboard')} className="text-slate-500 hover:text-emerald-600 transition">
-                    {t.footer_dashboard_link}
-                  </button>
-                </li>
               </ul>
             </div>
 
@@ -144,8 +140,10 @@ function SanadAppContent() {
 
 export default function App() {
   return (
-    <SanadProvider>
-      <SanadAppContent />
-    </SanadProvider>
+    <HashRouter>
+      <SanadProvider>
+        <SanadAppContent />
+      </SanadProvider>
+    </HashRouter>
   );
 }

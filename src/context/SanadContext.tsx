@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BeneficiaryProfile, Challenge, UrgentNeed, HopeMessage, ActiveTab, Comment, Reply, SanadNotification } from '../types';
 import { INITIAL_BENEFICIARIES, INITIAL_CHALLENGES, INITIAL_URGENT_NEEDS, INITIAL_HOPE_MESSAGES } from '../mockData';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -22,14 +23,15 @@ interface SanadContextType {
   currentBeneficiary: BeneficiaryProfile | null; // Logged in family
   selectedFamilyId: string; // The family ID currently displayed on the platform
   setSelectedFamilyId: (id: string) => void;
+  selectedFamily: BeneficiaryProfile | null; // Global selected or logged-in family
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   login: (password: string) => boolean;
   logout: () => void;
   updateProfile: (profile: Partial<BeneficiaryProfile>) => void;
-  addChallenge: (title: string, text: string, imageUrl: string) => void;
+  addChallenge: (title: string, text: string, imageUrl: string, imageUrls?: string[]) => void;
   deleteChallenge: (id: string) => void;
-  addUrgentNeed: (title: string, description: string, cost: number, imageUrl: string, crowdfundingUrl: string) => void;
+  addUrgentNeed: (title: string, description: string, cost: number, imageUrl: string, crowdfundingUrl: string, imageUrls?: string[]) => void;
   deleteUrgentNeed: (id: string) => void;
   supportNeed: (needId: string, amount: number) => void;
   likeChallenge: (challengeId: string) => void;
@@ -79,10 +81,16 @@ const seedDatabaseIfNeeded = async () => {
       }
     }
 
-    // Always seed the 10 slot accounts if they are not yet populated in the database
+    // Always seed the 20 slot accounts if they are not yet populated in the database
     for (const b of INITIAL_BENEFICIARIES) {
-      if (!seededIds.includes(b.id) || b.id === 'f1') {
+      const matchDoc = benSnap.docs.find(docSnap => docSnap.id === b.id);
+      if (!matchDoc) {
         await setDoc(doc(db, 'beneficiaries', b.id), b);
+      } else {
+        const data = matchDoc.data() as BeneficiaryProfile;
+        if (!data.dashboardSlug) {
+          await updateDoc(doc(db, 'beneficiaries', b.id), { dashboardSlug: b.dashboardSlug });
+        }
       }
     }
 
@@ -112,6 +120,9 @@ const seedDatabaseIfNeeded = async () => {
 };
 
 export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [activeTab, setActiveTabState] = useState<ActiveTab>('home');
   const [beneficiaries, setBeneficiaries] = useState<BeneficiaryProfile[]>([]);
   const [currentNeeds, setCurrentNeeds] = useState<UrgentNeed[]>([]);
@@ -138,7 +149,29 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setActiveTab = (tab: ActiveTab) => {
     setActiveTabState(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    if (tab === 'home') {
+      navigate('/');
+    } else {
+      navigate('/' + tab);
+    }
   };
+
+  // Synchronize URL route developments back to Tab visual states
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/' || path.startsWith('/profile') || path.startsWith('/user')) {
+      setActiveTabState('home');
+    } else if (path === '/needs' || path.startsWith('/needs')) {
+      setActiveTabState('needs');
+    } else if (path === '/challenges' || path.startsWith('/challenges')) {
+      setActiveTabState('challenges');
+    } else if (path === '/hope' || path.startsWith('/hope')) {
+      setActiveTabState('hope');
+    } else if (path === '/dashboard' || path.startsWith('/dashboard')) {
+      setActiveTabState('dashboard');
+    }
+  }, [location.pathname]);
 
   const setSelectedFamilyId = (id: string) => {
     setSelectedFamilyIdState(id);
@@ -330,7 +363,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Add challenge survival update
-  const addChallenge = async (title: string, text: string, imageUrl: string) => {
+  const addChallenge = async (title: string, text: string, imageUrl: string, imageUrls?: string[]) => {
     if (!currentBeneficiary) return;
 
     const defaultImages = [
@@ -351,6 +384,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       title,
       text,
       imageUrl: finalImg,
+      imageUrls: imageUrls && imageUrls.length > 0 ? imageUrls : [finalImg],
       likes: 0
     };
 
@@ -371,7 +405,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Add Urgent Need item
-  const addUrgentNeed = async (title: string, description: string, cost: number, imageUrl: string, crowdfundingUrl: string) => {
+  const addUrgentNeed = async (title: string, description: string, cost: number, imageUrl: string, crowdfundingUrl: string, imageUrls?: string[]) => {
     if (!currentBeneficiary) return;
 
     const defaultNeedsImages = [
@@ -393,6 +427,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       description,
       cost: Number(cost) || 100,
       imageUrl: finalImg,
+      imageUrls: imageUrls && imageUrls.length > 0 ? imageUrls : [finalImg],
       crowdfundingUrl: finalCampUrl,
       collectedAmount: 0,
       isUrgent: true
@@ -801,7 +836,9 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const initializedBeneficiaries = beneficiaries.filter(b => b.initialized);
-  const selectedFamily = initializedBeneficiaries.find(b => b.id === selectedFamilyId) || initializedBeneficiaries[0] || null;
+  const selectedFamily = currentBeneficiary 
+    ? currentBeneficiary 
+    : (beneficiaries.find(b => b.id === selectedFamilyId) || beneficiaries.find(b => b.id === 'f_slot_1') || null);
   const familyNeeds = currentNeeds.filter(n => n.beneficiaryId === (selectedFamily?.id || ''));
   const familyActiveNeedsCount = familyNeeds.filter(n => n.collectedAmount < n.cost).length;
 
@@ -822,6 +859,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentBeneficiary,
         selectedFamilyId,
         setSelectedFamilyId,
+        selectedFamily,
         activeTab,
         setActiveTab,
         login,

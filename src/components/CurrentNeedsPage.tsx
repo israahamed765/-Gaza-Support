@@ -4,12 +4,14 @@ import { UrgentNeed } from '../types';
 import { Search, MapPin, DollarSign, ExternalLink, Heart, CheckCircle2, AlertCircle, Coins, ArrowUpRight, MessageCircle } from 'lucide-react';
 import { translations } from '../translations';
 import { SolidarityComments } from './SolidarityComments';
+import { ImageCarousel } from './ImageCarousel';
 
 export const CurrentNeedsPage: React.FC = () => {
   const { 
     currentNeeds, 
     supportNeed, 
     selectedFamilyId, 
+    selectedFamily,
     beneficiaries, 
     language,
     currentBeneficiary,
@@ -29,10 +31,9 @@ export const CurrentNeedsPage: React.FC = () => {
   const [donorName, setDonorName] = useState<string>('');
   const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
   const [expandedNeedId, setExpandedNeedId] = useState<string | null>(null);
+  const [expandedDescs, setExpandedDescs] = useState<Record<string, boolean>>({});
 
   // Active family object
-  const initializedBeneficiaries = beneficiaries.filter(b => b.initialized);
-  const selectedFamily = initializedBeneficiaries.find(b => b.id === selectedFamilyId) || initializedBeneficiaries[0];
   const familyName = selectedFamily ? selectedFamily.name : (isEn ? 'Family' : 'العائلة');
 
   // Filter needs specifically for the SELECTED single family
@@ -139,18 +140,18 @@ export const CurrentNeedsPage: React.FC = () => {
                 className="bg-white rounded-3xl border border-slate-100 shadow-xs hover:shadow-md transition duration-300 flex flex-col overflow-hidden group text-start"
               >
                 {/* Need Image Card */}
-                <div className="relative h-48 w-full bg-slate-50 shrink-0 overflow-hidden">
-                  <img
-                    src={need.imageUrl || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600'}
-                    alt={need.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                <div className="relative w-full bg-slate-50 shrink-0 overflow-hidden">
+                  <ImageCarousel 
+                    images={need.imageUrls} 
+                    fallbackImage={need.imageUrl || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600'} 
+                    alt={need.title} 
                   />
                   {need.isUrgent && (
-                    <span className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
+                    <span className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-md z-10">
                       {t.needs_urgent}
                     </span>
                   )}
-                  <span className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-xs font-semibold">
+                  <span className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-xs font-semibold z-10">
                     {need.beneficiaryLocation || selectedFamily?.location}
                   </span>
                 </div>
@@ -161,9 +162,18 @@ export const CurrentNeedsPage: React.FC = () => {
                     <h3 className="text-sm sm:text-base font-extrabold text-slate-900 group-hover:text-emerald-700 transition leading-snug">
                       {need.title}
                     </h3>
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                    <p className={`text-xs text-slate-600 leading-relaxed break-words whitespace-pre-wrap ${expandedDescs[need.id] ? '' : 'line-clamp-3'}`}>
                       {need.description}
                     </p>
+                    {need.description && need.description.length > 115 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDescs(prev => ({ ...prev, [need.id]: !prev[need.id] }))}
+                        className="text-xs text-emerald-650 hover:text-emerald-750 font-bold transition-colors cursor-pointer mt-0.5"
+                      >
+                        {expandedDescs[need.id] ? (isEn ? 'Show Less' : 'عرض أقل') : (isEn ? 'Read More...' : 'اقرأ المزيد...')}
+                      </button>
+                    )}
                   </div>
 
                   {/* Pricing Progress Section */}

@@ -3,6 +3,7 @@ import { useSanad } from '../context/SanadContext';
 import { Heart, MessageCircle, Share2, Sparkles, BookOpen, Clock, PenTool, Trash2 } from 'lucide-react';
 import { translations } from '../translations';
 import { SolidarityComments } from './SolidarityComments';
+import { ImageCarousel } from './ImageCarousel';
 
 export const DailyChallengesPage: React.FC = () => {
   const { 
@@ -10,6 +11,7 @@ export const DailyChallengesPage: React.FC = () => {
     likeChallenge, 
     setActiveTab, 
     selectedFamilyId, 
+    selectedFamily,
     beneficiaries, 
     language,
     currentBeneficiary,
@@ -25,8 +27,6 @@ export const DailyChallengesPage: React.FC = () => {
   const isEn = language === 'en';
 
   // Find currently active family details
-  const initializedBeneficiaries = beneficiaries.filter(b => b.initialized);
-  const selectedFamily = initializedBeneficiaries.find(b => b.id === selectedFamilyId) || initializedBeneficiaries[0];
   const familyName = selectedFamily ? selectedFamily.name : (isEn ? 'Family' : 'العائلة');
 
   // Filter challenges to focus strictly on the active family!
@@ -136,13 +136,12 @@ export const DailyChallengesPage: React.FC = () => {
               </div>
 
               {/* Image attachment */}
-              {challenge.imageUrl && (
-                <div className="relative aspect-video max-h-96 w-full bg-slate-50 border-y border-slate-100 overflow-hidden">
-                  <img
-                    src={challenge.imageUrl}
+              {(challenge.imageUrl || (challenge.imageUrls && challenge.imageUrls.length > 0)) && (
+                <div className="relative w-full border-y border-slate-100 overflow-hidden">
+                  <ImageCarousel
+                    images={challenge.imageUrls}
+                    fallbackImage={challenge.imageUrl}
                     alt={challenge.title}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
                   />
                 </div>
               )}

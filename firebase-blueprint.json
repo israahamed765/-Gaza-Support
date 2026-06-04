@@ -6,6 +6,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "username": { "type": "string" },
         "name": { "type": "string" },
         "location": { "type": "string" },
         "profilePicture": { "type": "string" },

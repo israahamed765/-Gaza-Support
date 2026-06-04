@@ -130,15 +130,7 @@ export const HeaderNavbar: React.FC = () => {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => handleTabClick('dashboard')}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-5 py-2.5 rounded-2xl text-sm font-semibold shadow-md shadow-emerald-100 transition-all duration-300"
-              >
-                <User className="w-4 h-4" />
-                <span>{t.login_button}</span>
-              </button>
-            )}
+            ) : null}
           </div>
 
           {/* Mobile Actions Controls */}
@@ -231,15 +223,7 @@ export const HeaderNavbar: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <button
-                  onClick={() => handleTabClick('dashboard')}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl text-sm font-bold shadow-md transition"
-                >
-                  <User className="w-4 h-4" />
-                  <span>{t.mobile_login_button}</span>
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

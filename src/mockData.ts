@@ -12,7 +12,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Sanad-Gaza-812',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-gaza-b812x'
   },
   {
     id: 'f_slot_2',
@@ -24,7 +25,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Hope-Resilience-340',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-hope-r340p'
   },
   {
     id: 'f_slot_3',
@@ -36,7 +38,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Amal-Palestine-591',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-amal-p591k'
   },
   {
     id: 'f_slot_4',
@@ -48,7 +51,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Covenant-Care-704',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-cov-c704z'
   },
   {
     id: 'f_slot_5',
@@ -60,7 +64,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Olive-Branch-168',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-olive-b168t'
   },
   {
     id: 'f_slot_6',
@@ -72,7 +77,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Sturdy-Tents-923',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-tent-s923m'
   },
   {
     id: 'f_slot_7',
@@ -84,7 +90,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Solidarity-Gz-415',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-solid-g415n'
   },
   {
     id: 'f_slot_8',
@@ -96,7 +103,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Dignity-Life-602',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-dig-l602w'
   },
   {
     id: 'f_slot_9',
@@ -108,7 +116,8 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Faith-Gaza-529',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-faith-g529x'
   },
   {
     id: 'f_slot_10',
@@ -120,7 +129,138 @@ export const INITIAL_BENEFICIARIES: BeneficiaryProfile[] = [
     totalSpent: 0,
     password: 'Peace-Camp-711',
     initialized: false,
-    crowdfundingUrl: ''
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-peace-c711q'
+  },
+  {
+    id: 'f_slot_11',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Patience-Gaza-448',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-pat-g448f'
+  },
+  {
+    id: 'f_slot_12',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Mercy-Synergies-905',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-mercy-s905v'
+  },
+  {
+    id: 'f_slot_13',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Compassion-Aid-112',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-comp-a112r'
+  },
+  {
+    id: 'f_slot_14',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Shelter-Safe-523',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-she-s523y'
+  },
+  {
+    id: 'f_slot_15',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Warm-Blanket-850',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-warm-b850g'
+  },
+  {
+    id: 'f_slot_16',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Pure-Water-396',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-water-p396j'
+  },
+  {
+    id: 'f_slot_17',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Daily-Bread-670',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-bread-d670s'
+  },
+  {
+    id: 'f_slot_18',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Healing-Hands-231',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-heal-h231h'
+  },
+  {
+    id: 'f_slot_19',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Future-Bright-754',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-fut-b754z'
+  },
+  {
+    id: 'f_slot_20',
+    name: '',
+    location: '',
+    profilePicture: '',
+    description: '',
+    totalDonated: 0,
+    totalSpent: 0,
+    password: 'Sanad-Union-982',
+    initialized: false,
+    crowdfundingUrl: '',
+    dashboardSlug: 'sec-union-u982l'
   }
 ];
 

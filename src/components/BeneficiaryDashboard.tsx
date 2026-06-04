@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSanad } from '../context/SanadContext';
-import { KeyRound, User, MapPin, Eye, LogOut, CheckCircle, PlusCircle, AlertCircle, Bookmark, FileText, Camera, Upload, Trash2, Coins, ArrowUpRight, DollarSign, Bell, Heart, Sparkles, MessageCircle } from 'lucide-react';
+import { KeyRound, User, MapPin, Eye, LogOut, CheckCircle, PlusCircle, AlertCircle, Bookmark, FileText, Camera, Upload, Trash2, Coins, ArrowUpRight, DollarSign, Bell, Heart, Sparkles, MessageCircle, X } from 'lucide-react';
 import { translations } from '../translations';
 
 // Sub-component for individual Needs with an direct collectedAmount modifier input (user requirement)
@@ -110,8 +111,18 @@ export const BeneficiaryDashboard: React.FC = () => {
     language
   } = useSanad();
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const t = translations[language];
   const isEn = language === 'en';
+
+  // Redirect to private ID-based dashboard path if logged in on generic /dashboard
+  useEffect(() => {
+    if (currentBeneficiary && (location.pathname === '/dashboard' || location.pathname === '/dashboard/')) {
+      navigate(`/dashboard/${currentBeneficiary.dashboardSlug || currentBeneficiary.id}`, { replace: true });
+    }
+  }, [currentBeneficiary, location.pathname, navigate]);
 
   // Authentication states
   const [password, setPassword] = useState<string>('');
@@ -119,6 +130,7 @@ export const BeneficiaryDashboard: React.FC = () => {
 
   // Profile setup states
   const [profileName, setProfileName] = useState<string>('');
+  const [profileUsername, setProfileUsername] = useState<string>('');
   const [profileLocation, setProfileLocation] = useState<string>('');
   const [profilePicture, setProfilePicture] = useState<string>('');
   const [profileDesc, setProfileDesc] = useState<string>('');
@@ -126,20 +138,28 @@ export const BeneficiaryDashboard: React.FC = () => {
   const [profileSpent, setProfileSpent] = useState<number>(0);
   const [profileCampUrl, setProfileCampUrl] = useState<string>('');
   const [profileSavedMsg, setProfileSavedMsg] = useState<boolean>(false);
+  const [profileIsSaving, setProfileIsSaving] = useState<boolean>(false);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
 
   // Publish challenge states
   const [chalTitle, setChalTitle] = useState<string>('');
   const [chalText, setChalText] = useState<string>('');
   const [chalImageUrl, setChalImageUrl] = useState<string>('');
+  const [chalImageUrls, setChalImageUrls] = useState<string[]>([]);
   const [chalAddedSuccess, setChalAddedSuccess] = useState<boolean>(false);
+  const [chalIsSaving, setChalIsSaving] = useState<boolean>(false);
+  const [chalSaveError, setChalSaveError] = useState<string | null>(null);
 
   // Add urgent need states
   const [needTitle, setNeedTitle] = useState<string>('');
   const [needDesc, setNeedDesc] = useState<string>('');
   const [needCost, setNeedCost] = useState<number>(100);
   const [needImageUrl, setNeedImageUrl] = useState<string>('');
+  const [needImageUrls, setNeedImageUrls] = useState<string[]>([]);
   const [needCrowdfundUrl, setNeedCrowdfundUrl] = useState<string>('');
   const [needAddedSuccess, setNeedAddedSuccess] = useState<boolean>(false);
+  const [needIsSaving, setNeedIsSaving] = useState<boolean>(false);
+  const [needSaveError, setNeedSaveError] = useState<string | null>(null);
 
   // Drag over state indicators
   const [isDragOverProfile, setIsDragOverProfile] = useState(false);
@@ -159,6 +179,7 @@ export const BeneficiaryDashboard: React.FC = () => {
   useEffect(() => {
     if (currentBeneficiary) {
       setProfileName(currentBeneficiary.name || '');
+      setProfileUsername(currentBeneficiary.username || '');
       setProfileLocation(currentBeneficiary.location || '');
       setProfilePicture(currentBeneficiary.profilePicture || '');
       setProfileDesc(currentBeneficiary.description || '');
@@ -167,6 +188,7 @@ export const BeneficiaryDashboard: React.FC = () => {
       setProfileCampUrl(currentBeneficiary.crowdfundingUrl || '');
     } else {
       setProfileName('');
+      setProfileUsername('');
       setProfileLocation('');
       setProfilePicture('');
       setProfileDesc('');
@@ -208,8 +230,8 @@ export const BeneficiaryDashboard: React.FC = () => {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        // Limit maximum width or height to 1000px to keep images crisp yet extremely lightweight
-        const maxDim = 1000;
+        // Limit maximum width or height to 450px to keep images extremely lightweight and fast to save
+        const maxDim = 450;
         let width = img.width;
         let height = img.height;
 
@@ -230,8 +252,8 @@ export const BeneficiaryDashboard: React.FC = () => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          // Compress as image/jpeg format with 0.7 high performance quality factor
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          // Compress as lightweight JPEG with 0.5 quality factor (extremely reliable for Firestore limits)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
           setter(compressedDataUrl);
         } else {
           setter(event.target?.result as string);
@@ -253,58 +275,92 @@ export const BeneficiaryDashboard: React.FC = () => {
     e.preventDefault();
   };
 
-  const handleProfileSave = (e: React.FormEvent) => {
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profileName.trim()) return;
 
-    updateProfile({
-      name: profileName,
-      location: profileLocation,
-      profilePicture: profilePicture || 'https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?auto=format&fit=crop&q=80&w=300',
-      description: profileDesc,
-      totalDonated: Number(profileDonated) || 0,
-      totalSpent: Number(profileSpent) || 0,
-      crowdfundingUrl: profileCampUrl
-    });
+    setProfileIsSaving(true);
+    setProfileSaveError(null);
 
-    setProfileSavedMsg(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => setProfileSavedMsg(false), 5000);
+    try {
+      await updateProfile({
+        name: profileName,
+        username: profileUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''),
+        location: profileLocation,
+        profilePicture: profilePicture || 'https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?auto=format&fit=crop&q=80&w=300',
+        description: profileDesc,
+        totalDonated: Number(profileDonated) || 0,
+        totalSpent: Number(profileSpent) || 0,
+        crowdfundingUrl: profileCampUrl
+      });
+
+      setProfileSavedMsg(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => setProfileSavedMsg(false), 5000);
+    } catch (err: any) {
+      console.error("Save profile failed:", err);
+      setProfileSaveError(isEn ? "Failed to save profile. Please fully check your network connections or use a smaller image file." : "فشل في حفظ الملف الشخصي. يرجى مراجعة الاتصال بالشبكة أو استخدام ملف صورة أصغر حجماً.");
+    } finally {
+      setProfileIsSaving(false);
+    }
   };
 
   // Publish challenge
-  const handlePublishChallengeSubmit = (e: React.FormEvent) => {
+  const handlePublishChallengeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chalTitle.trim() || !chalText.trim()) return;
 
-    addChallenge(chalTitle, chalText, chalImageUrl);
-    setChalTitle('');
-    setChalText('');
-    setChalImageUrl('');
-    setChalAddedSuccess(true);
-    setTimeout(() => setChalAddedSuccess(false), 4500);
+    setChalIsSaving(true);
+    setChalSaveError(null);
+
+    try {
+      await addChallenge(chalTitle, chalText, chalImageUrl || chalImageUrls[0] || '', chalImageUrls);
+      setChalTitle('');
+      setChalText('');
+      setChalImageUrl('');
+      setChalImageUrls([]);
+      setChalAddedSuccess(true);
+      setTimeout(() => setChalAddedSuccess(false), 4500);
+    } catch (err: any) {
+      console.error("Add challenge failed:", err);
+      setChalSaveError(isEn ? "Failed to post update. Please try smaller images or reduce quality." : "لم يتم نشر التحديث بنجاح. يرجى تجربة ملفات صور أصغر لحفظ الملف الشخصي.");
+    } finally {
+      setChalIsSaving(false);
+    }
   };
 
   // Publish need
-  const handlePublishNeedSubmit = (e: React.FormEvent) => {
+  const handlePublishNeedSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!needTitle.trim() || !needDesc.trim() || needCost <= 0) return;
 
-    addUrgentNeed(
-      needTitle,
-      needDesc,
-      needCost,
-      needImageUrl,
-      needCrowdfundUrl || profileCampUrl
-    );
+    setNeedIsSaving(true);
+    setNeedSaveError(null);
 
-    setNeedTitle('');
-    setNeedDesc('');
-    setNeedCost(100);
-    setNeedImageUrl('');
-    setNeedCrowdfundUrl('');
-    setNeedAddedSuccess(true);
-    setTimeout(() => setNeedAddedSuccess(false), 4500);
+    try {
+      await addUrgentNeed(
+        needTitle,
+        needDesc,
+        needCost,
+        needImageUrl || needImageUrls[0] || '',
+        needCrowdfundUrl || profileCampUrl,
+        needImageUrls
+      );
+
+      setNeedTitle('');
+      setNeedDesc('');
+      setNeedCost(100);
+      setNeedImageUrl('');
+      setNeedImageUrls([]);
+      setNeedCrowdfundUrl('');
+      setNeedAddedSuccess(true);
+      setTimeout(() => setNeedAddedSuccess(false), 4500);
+    } catch (err: any) {
+      console.error("Add need failed:", err);
+      setNeedSaveError(isEn ? "Failed to publish need. Check connections or reduce photo sizes." : "فشل في نشر الاحتياج العاجل. تحقق من اتصالك أو قلل حجم الصور.");
+    } finally {
+      setNeedIsSaving(false);
+    }
   };
 
   // Filter items specifically created by this logged-in beneficiary
@@ -572,13 +628,20 @@ export const BeneficiaryDashboard: React.FC = () => {
             </div>
 
             {profileSavedMsg && (
-              <div className="bg-emerald-55 border border-emerald-300 text-teal-900 p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm text-start">
+              <div className="bg-emerald-50 border border-emerald-300 text-teal-900 p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm text-start">
                 <CheckCircle className="w-5 h-5 text-emerald-800 shrink-0" />
                 <span>{t.p_edit_saved_success}</span>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-start">
+            {profileSaveError && (
+              <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm text-start">
+                <AlertCircle className="w-5 h-5 text-red-650 shrink-0" />
+                <span>{profileSaveError}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-start">
               
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-700">{t.p_label_name}</label>
@@ -605,6 +668,24 @@ export const BeneficiaryDashboard: React.FC = () => {
                     value={profileLocation}
                     onChange={(e) => setProfileLocation(e.target.value)}
                     className="w-full pr-9 pl-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 bg-slate-50 focus:bg-white text-slate-900 text-sm outline-hidden text-start"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  {isEn ? 'Unique Username (e.g. for user/ahmad)' : 'اسم المستخدم الفريد (للرابط المباشر)'}
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 pointer-events-none text-xs font-mono">
+                    @
+                  </span>
+                  <input
+                    type="text"
+                    placeholder={isEn ? 'lowercase, no spaces...' : 'أحرف إنجليزية صغيرة، بدون فراغات...'}
+                    value={profileUsername}
+                    onChange={(e) => setProfileUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 bg-slate-50 focus:bg-white text-slate-900 text-sm outline-hidden text-start font-mono"
                   />
                 </div>
               </div>
@@ -734,9 +815,17 @@ export const BeneficiaryDashboard: React.FC = () => {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-7 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer"
+                disabled={profileIsSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-7 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
               >
-                {t.p_save_btn}
+                {profileIsSaving ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>{isEn ? "Saving..." : "جاري الحفظ..."}</span>
+                  </>
+                ) : (
+                  <span>{t.p_save_btn}</span>
+                )}
               </button>
             </div>
           </form>
@@ -754,6 +843,13 @@ export const BeneficiaryDashboard: React.FC = () => {
               <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-2 text-start">
                 <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span>{t.chal_add_success}</span>
+              </div>
+            )}
+
+            {chalSaveError && (
+              <div className="bg-red-50 border border-red-250 text-red-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-2 text-start">
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                <span>{chalSaveError}</span>
               </div>
             )}
 
@@ -783,8 +879,10 @@ export const BeneficiaryDashboard: React.FC = () => {
               </div>
 
               {/* Drag & drop images for challenges */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">{t.chal_add_label_img}</label>
+              <div className="space-y-3 text-start">
+                <label className="block text-xs font-bold text-slate-700">
+                  {isEn ? 'Pictures / Documentaries (Allows Multiple) *' : 'الصور المرفقة / التوثيق الميداني للتصديق (يدعم رفع عدة صور) *'}
+                </label>
                 <div 
                   onDragOver={onDragOver}
                   onDragLeave={() => setIsDragOverChal(false)}
@@ -792,8 +890,14 @@ export const BeneficiaryDashboard: React.FC = () => {
                   onDrop={(e) => {
                     setIsDragOverChal(false);
                     e.preventDefault();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) handleImageFileLoad(file, setChalImageUrl);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      const files = Array.from(e.dataTransfer.files) as File[];
+                      files.forEach(file => {
+                        handleImageFileLoad(file, (base64) => {
+                          setChalImageUrls(prev => [...prev, base64]);
+                        });
+                      });
+                    }
                   }}
                   className={`border-2 border-dashed rounded-2xl p-6 text-center transition flex flex-col items-center justify-center cursor-pointer ${
                     isDragOverChal 
@@ -807,33 +911,69 @@ export const BeneficiaryDashboard: React.FC = () => {
                     id="chalFileSelector" 
                     className="hidden" 
                     accept="image/*"
+                    multiple
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageFileLoad(file, setChalImageUrl);
+                      if (e.target.files && e.target.files.length > 0) {
+                        const files = Array.from(e.target.files) as File[];
+                        files.forEach(file => {
+                          handleImageFileLoad(file, (base64) => {
+                            setChalImageUrls(prev => [...prev, base64]);
+                          });
+                        });
+                      }
                     }}
                   />
                   
-                  {chalImageUrl ? (
-                    <div className="space-y-2">
-                      <img src={chalImageUrl} alt="وثائقية" className="max-h-36 rounded-xl object-contain mx-auto" />
-                      <p className="text-xs text-emerald-600 font-bold">{t.chal_add_img_success}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-8 h-8 mb-2 text-slate-400" />
-                      <p className="text-xs font-bold leading-relaxed">{t.chal_add_img_drag}</p>
-                    </>
-                  )}
+                  <>
+                    <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                    <p className="text-xs font-bold leading-relaxed">{isEn ? 'Drag & drop multiple images or click to select' : 'اسحب وأفلت عدة صور للتوثيق هنا أو اضغط للاختيار من جهازك'}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{isEn ? 'Images are compressed to ensure optimized lightweight sizes' : 'سيتم ضغط الصور تلقائياً لتسهيل وسرعة الرفع البرمجي'}</p>
+                  </>
                 </div>
+
+                {/* Uploaded images display card grid with Delete capability */}
+                {chalImageUrls.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-black text-slate-500">
+                      {isEn ? `Uploaded Files (${chalImageUrls.length}):` : `الملفات المرفوعة حالياً (${chalImageUrls.length}):`}
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-150">
+                      {chalImageUrls.map((url, idx) => (
+                        <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-white">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChalImageUrls(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="absolute top-1.5 right-1.5 bg-red-550 hover:bg-red-600 text-white rounded-full p-1 opacity-90 hover:opacity-100 hover:scale-105 transition active:scale-95 cursor-pointer shadow-xs"
+                            title={isEn ? "Remove photo" : "إزالة الصورة"}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-7 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer"
+                disabled={chalIsSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-7 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
               >
-                <span>{t.chal_add_btn}</span>
+                {chalIsSaving ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>{isEn ? "Posting..." : "جاري النشر..."}</span>
+                  </>
+                ) : (
+                  <span>{t.chal_add_btn}</span>
+                )}
               </button>
             </div>
           </form>
@@ -851,6 +991,13 @@ export const BeneficiaryDashboard: React.FC = () => {
               <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-2 text-start">
                 <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span>{t.need_add_success}</span>
+              </div>
+            )}
+
+            {needSaveError && (
+              <div className="bg-red-50 border border-red-255 text-red-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-2 text-start">
+                <AlertCircle className="w-5 h-5 text-red-650 shrink-0" />
+                <span>{needSaveError}</span>
               </div>
             )}
 
@@ -906,8 +1053,10 @@ export const BeneficiaryDashboard: React.FC = () => {
             </div>
 
             {/* Drag & drop images for needs */}
-            <div className="space-y-1.5 text-start">
-              <label className="block text-xs font-bold text-slate-700">{t.need_add_label_img}</label>
+            <div className="space-y-3 text-start">
+              <label className="block text-xs font-bold text-slate-700">
+                {isEn ? 'Pictures / Documentaries (Allows Multiple) *' : 'الصور المرفقة / التوثيق الميداني للسلعة المحتاجة (يدعم رفع عدة صور) *'}
+              </label>
               <div 
                 onDragOver={onDragOver}
                 onDragLeave={() => setIsDragOverNeed(false)}
@@ -915,8 +1064,14 @@ export const BeneficiaryDashboard: React.FC = () => {
                 onDrop={(e) => {
                   setIsDragOverNeed(false);
                   e.preventDefault();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) handleImageFileLoad(file, setNeedImageUrl);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    const files = Array.from(e.dataTransfer.files) as File[];
+                    files.forEach(file => {
+                      handleImageFileLoad(file, (base64) => {
+                        setNeedImageUrls(prev => [...prev, base64]);
+                      });
+                    });
+                  }
                 }}
                 className={`border-2 border-dashed rounded-2xl p-6 text-center transition flex flex-col items-center justify-center cursor-pointer ${
                   isDragOverNeed 
@@ -930,24 +1085,52 @@ export const BeneficiaryDashboard: React.FC = () => {
                   id="needFileSelector" 
                   className="hidden" 
                   accept="image/*"
+                  multiple
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageFileLoad(file, setNeedImageUrl);
+                    if (e.target.files && e.target.files.length > 0) {
+                      const files = Array.from(e.target.files) as File[];
+                      files.forEach(file => {
+                        handleImageFileLoad(file, (base64) => {
+                          setNeedImageUrls(prev => [...prev, base64]);
+                        });
+                      });
+                    }
                   }}
                 />
                 
-                {needImageUrl ? (
-                  <div className="space-y-2">
-                    <img src={needImageUrl} alt="مادة الاحتياج" className="max-h-36 rounded-xl object-contain mx-auto" />
-                    <p className="text-xs text-emerald-600 font-bold">{t.need_add_img_success}</p>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 mb-2 text-slate-400" />
-                    <p className="text-xs font-bold leading-relaxed">{t.need_add_img_drag}</p>
-                  </>
-                )}
+                <>
+                  <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                  <p className="text-xs font-bold leading-relaxed">{isEn ? 'Drag & drop multiple images or click to select' : 'اسحب وأفلت عدة صور للتوثيق هنا أو اضغط للاختيار من جهازك'}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{isEn ? 'Images are compressed to ensure optimized lightweight sizes' : 'سيتم ضغط الصور تلقائياً لتسهيل وسرعة الرفع البرمجي'}</p>
+                </>
               </div>
+
+              {/* Uploaded images display card grid with Delete capability */}
+              {needImageUrls.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-black text-slate-500">
+                    {isEn ? `Uploaded Files (${needImageUrls.length}):` : `الملفات المرفوعة حالياً (${needImageUrls.length}):`}
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-150">
+                    {needImageUrls.map((url, idx) => (
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-white">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNeedImageUrls(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                          className="absolute top-1.5 right-1.5 bg-red-550 hover:bg-red-650 text-white rounded-full p-1 opacity-90 hover:opacity-100 hover:scale-105 transition active:scale-95 cursor-pointer shadow-xs"
+                          title={isEn ? "Remove photo" : "إزالة الصورة"}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5 text-start">
@@ -965,9 +1148,17 @@ export const BeneficiaryDashboard: React.FC = () => {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-7 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer"
+                disabled={needIsSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-7 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
               >
-                <span>{t.need_add_btn}</span>
+                {needIsSaving ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>{isEn ? "Publishing..." : "جاري النشر..."}</span>
+                  </>
+                ) : (
+                  <span>{t.need_add_btn}</span>
+                )}
               </button>
             </div>
           </form>
