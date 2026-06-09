@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { 
   Heart, MapPin, DollarSign, ExternalLink, Calendar, 
-  MessageSquare, User, ShieldCheck, Share2, ArrowLeft,
+  MessageSquare, User, ShieldCheck, ArrowLeft,
   Sparkles, CheckCircle2, TrendingUp, HelpCircle
 } from 'lucide-react';
 import { translations } from '../translations';
@@ -35,7 +35,6 @@ export const DynamicProfileView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [profile, setProfile] = useState<BeneficiaryProfile | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [copied, setCopied] = useState<boolean>(false);
 
   // Load the specific profile
   useEffect(() => {
@@ -96,12 +95,6 @@ export const DynamicProfileView: React.FC = () => {
     fetchProfile();
   }, [id, username, beneficiaries, setSelectedFamilyId, isEn]);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
@@ -149,7 +142,7 @@ export const DynamicProfileView: React.FC = () => {
   return (
     <div className="space-y-12 py-8 text-start max-w-6xl mx-auto px-4" id="dynamic_profile_view">
       
-      {/* Back & Share Buttons */}
+      {/* Back Button */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/')}
@@ -157,18 +150,6 @@ export const DynamicProfileView: React.FC = () => {
         >
           <ArrowLeft className="w-4 h-4" />
           <span>{isEn ? 'Back to Explorer' : 'العودة لاستكشاف العائلات'}</span>
-        </button>
-
-        <button
-          onClick={handleShare}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
-            copied 
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-              : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
-          }`}
-        >
-          <Share2 className="w-3.5 h-3.5" />
-          <span>{copied ? (isEn ? 'Link Copied!' : 'تم نسخ الرابط!') : (isEn ? 'Share Profile' : 'مشاركة الملف')}</span>
         </button>
       </div>
 

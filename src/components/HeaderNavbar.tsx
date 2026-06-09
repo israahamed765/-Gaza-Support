@@ -102,7 +102,7 @@ export const HeaderNavbar: React.FC = () => {
               <span>{language === 'ar' ? 'English' : 'العربية'}</span>
             </button>
 
-            {currentBeneficiary ? (
+             {currentBeneficiary ? (
               <div className="flex items-center gap-3 bg-teal-50/70 border border-teal-100 rounded-2xl p-1.5 pr-4 pl-3">
                 <div className="flex flex-col items-start text-start">
                   <span className="text-xs text-slate-500">{t.user_welcome}</span>
@@ -130,7 +130,15 @@ export const HeaderNavbar: React.FC = () => {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <button
+                onClick={() => handleTabClick('dashboard')}
+                className="bg-emerald-600 hover:bg-emerald-705 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-xs cursor-pointer select-none transition-all duration-350 hover:bg-emerald-700 flex items-center gap-2"
+              >
+                <User className="w-4 h-4" />
+                <span>{t.mobile_login_button}</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Actions Controls */}
@@ -223,7 +231,18 @@ export const HeaderNavbar: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <button
+                  onClick={() => {
+                    handleTabClick('dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full text-center bg-emerald-600 text-white rounded-xl py-3 text-sm font-extrabold hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+                >
+                  <User className="w-4 h-4" />
+                  <span>{t.mobile_login_button}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

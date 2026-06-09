@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSanad } from '../context/SanadContext';
-import { KeyRound, User, MapPin, Eye, LogOut, CheckCircle, PlusCircle, AlertCircle, Bookmark, FileText, Camera, Upload, Trash2, Coins, ArrowUpRight, DollarSign, Bell, Heart, Sparkles, MessageCircle, X } from 'lucide-react';
+import { KeyRound, User, MapPin, Eye, LogOut, CheckCircle, PlusCircle, AlertCircle, Bookmark, FileText, Camera, Upload, Trash2, Coins, ArrowUpRight, DollarSign, Bell, Heart, Sparkles, MessageCircle, X, PenLine } from 'lucide-react';
 import { translations } from '../translations';
 
 // Sub-component for individual Needs with an direct collectedAmount modifier input (user requirement)
@@ -102,6 +102,7 @@ export const BeneficiaryDashboard: React.FC = () => {
     logout,
     updateProfile,
     addChallenge,
+    updateChallenge,
     deleteChallenge,
     addUrgentNeed,
     deleteUrgentNeed,
@@ -160,6 +161,15 @@ export const BeneficiaryDashboard: React.FC = () => {
   const [needAddedSuccess, setNeedAddedSuccess] = useState<boolean>(false);
   const [needIsSaving, setNeedIsSaving] = useState<boolean>(false);
   const [needSaveError, setNeedSaveError] = useState<string | null>(null);
+
+  // Edit existing challenge state
+  const [editingChallenge, setEditingChallenge] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [editDesc, setEditDesc] = useState<string>('');
+  const [editImageUrls, setEditImageUrls] = useState<string[]>([]);
+  const [editIsSaving, setEditIsSaving] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isDragOverEdit, setIsDragOverEdit] = useState<boolean>(false);
 
   // Drag over state indicators
   const [isDragOverProfile, setIsDragOverProfile] = useState(false);
@@ -268,6 +278,59 @@ export const BeneficiaryDashboard: React.FC = () => {
       console.error("FileReader failed to load image file");
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleFileLoad = (file: File, setter: (base64: string) => void) => {
+    if (file.type.startsWith('video/')) {
+      (async () => {
+        try {
+          // Asynchronously check duration of the video
+          const duration = await new Promise<number>((resolve) => {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+              window.URL.revokeObjectURL(video.src);
+              resolve(video.duration);
+            };
+            video.onerror = () => {
+              resolve(0);
+            };
+            video.src = URL.createObjectURL(file);
+          });
+
+          if (duration > 120) {
+            alert(isEn
+              ? 'The video duration exceeds the 2-minute limit! Please choose a video shorter than 2 minutes.'
+              : 'مدة الفيديو تتجاوز دقيقتين! يرجى اختيار فيديو أقصر لتجنب مشاكل الحفظ عبر خوادم الويب.');
+            return;
+          }
+        } catch (e) {
+          console.error("Error checking video duration: ", e);
+        }
+
+        // Informative guidance on extremely large video sizes (e.g. > 30MB)
+        if (file.size > 30 * 1024 * 1024) {
+          alert(isEn
+            ? 'This video file is very large (over 30MB). Please make sure to use a compressed video file so it saves successfully!'
+            : 'حجم الفيديو كبير جداً (متجاوز ٣٠ ميجابايت). لضمان الحفظ الموثق والناجح، يرجى استخدام فيديو مضغوط ومناسب للحجم.');
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setter(event.target.result as string);
+          }
+        };
+        reader.onerror = () => {
+          console.error("FileReader failed to load video file");
+        };
+        reader.readAsDataURL(file);
+      })();
+    } else if (file.type.startsWith('image/')) {
+      handleImageFileLoad(file, setter);
+    } else {
+      alert(isEn ? 'Please choose a valid image or video file!' : 'يرجى اختيار ملف صورة أو فيديو صالح!');
+    }
   };
 
   // Drag & drop handlers
@@ -602,6 +665,19 @@ export const BeneficiaryDashboard: React.FC = () => {
                         </span>
                         <button
                           onClick={() => {
+                            setEditingChallenge(chal);
+                            setEditTitle(chal.title || '');
+                            setEditDesc(chal.text || '');
+                            setEditImageUrls(chal.imageUrls || (chal.imageUrl ? [chal.imageUrl] : []));
+                            setEditError(null);
+                          }}
+                          className="p-1 px-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-800 rounded-lg transition"
+                          title={isEn ? "Edit Post" : "تعديل المنشور"}
+                        >
+                          <PenLine className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
                             deleteChallenge(chal.id);
                           }}
                           className="p-1 px-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition"
@@ -878,10 +954,10 @@ export const BeneficiaryDashboard: React.FC = () => {
                 ></textarea>
               </div>
 
-              {/* Drag & drop images for challenges */}
+              {/* Drag & drop images/videos for challenges */}
               <div className="space-y-3 text-start">
                 <label className="block text-xs font-bold text-slate-700">
-                  {isEn ? 'Pictures / Documentaries (Allows Multiple) *' : 'الصور المرفقة / التوثيق الميداني للتصديق (يدعم رفع عدة صور) *'}
+                  {isEn ? 'Pictures / Video Documentaries (Allows Multiple) *' : 'الصور المرفقة / مقاطع الفيديو التوثيقية للتصديق (يدعم رفع صور ومقاطع فيديو) *'}
                 </label>
                 <div 
                   onDragOver={onDragOver}
@@ -893,7 +969,7 @@ export const BeneficiaryDashboard: React.FC = () => {
                     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                       const files = Array.from(e.dataTransfer.files) as File[];
                       files.forEach(file => {
-                        handleImageFileLoad(file, (base64) => {
+                        handleFileLoad(file, (base64) => {
                           setChalImageUrls(prev => [...prev, base64]);
                         });
                       });
@@ -910,13 +986,13 @@ export const BeneficiaryDashboard: React.FC = () => {
                     type="file" 
                     id="chalFileSelector" 
                     className="hidden" 
-                    accept="image/*"
+                    accept="image/*,video/*"
                     multiple
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         const files = Array.from(e.target.files) as File[];
                         files.forEach(file => {
-                          handleImageFileLoad(file, (base64) => {
+                          handleFileLoad(file, (base64) => {
                             setChalImageUrls(prev => [...prev, base64]);
                           });
                         });
@@ -926,8 +1002,8 @@ export const BeneficiaryDashboard: React.FC = () => {
                   
                   <>
                     <Upload className="w-8 h-8 mb-2 text-slate-400" />
-                    <p className="text-xs font-bold leading-relaxed">{isEn ? 'Drag & drop multiple images or click to select' : 'اسحب وأفلت عدة صور للتوثيق هنا أو اضغط للاختيار من جهازك'}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">{isEn ? 'Images are compressed to ensure optimized lightweight sizes' : 'سيتم ضغط الصور تلقائياً لتسهيل وسرعة الرفع البرمجي'}</p>
+                    <p className="text-xs font-bold leading-relaxed">{isEn ? 'Drag & drop multiple images/videos or click to select' : 'اسحب وأفلت عدة صور وصوتيات أو فيديو للتوثيق هنا أو اضغط للاختيار من جهازك'}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{isEn ? 'Images are optimized automatically. Keep videos under 2 minutes.' : 'يتم تحسين الصور تلقائياً. يرجى إبقاء مدة الفيديوهات أقل من دقيقتين لصلاحية النشر.'}</p>
                   </>
                 </div>
 
@@ -938,22 +1014,36 @@ export const BeneficiaryDashboard: React.FC = () => {
                       {isEn ? `Uploaded Files (${chalImageUrls.length}):` : `الملفات المرفوعة حالياً (${chalImageUrls.length}):`}
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-150">
-                      {chalImageUrls.map((url, idx) => (
-                        <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-white">
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setChalImageUrls(prev => prev.filter((_, i) => i !== idx));
-                            }}
-                            className="absolute top-1.5 right-1.5 bg-red-550 hover:bg-red-600 text-white rounded-full p-1 opacity-90 hover:opacity-100 hover:scale-105 transition active:scale-95 cursor-pointer shadow-xs"
-                            title={isEn ? "Remove photo" : "إزالة الصورة"}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                      {chalImageUrls.map((url, idx) => {
+                        const isVideo = url && (url.startsWith('data:video/') || url.includes('video/') || url.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/));
+                        return (
+                          <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
+                            {isVideo ? (
+                              <video src={url} className="w-full h-full object-cover" muted />
+                            ) : (
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setChalImageUrls(prev => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="absolute top-1.5 right-1.5 bg-red-550 hover:bg-red-600 text-white rounded-full p-1 opacity-95 hover:opacity-100 hover:scale-105 transition active:scale-95 cursor-pointer shadow-xs z-10"
+                              title={isEn ? "Remove item" : "إزالة الملف"}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            {isVideo && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                <span className="bg-white/80 rounded-full p-1 shadow-xs">
+                                  <svg className="w-3.5 h-3.5 text-slate-800" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1364,6 +1454,201 @@ export const BeneficiaryDashboard: React.FC = () => {
         )}
 
       </div>
+
+      {/* EDIT CHALLENGE MODAL OVERLAY */}
+      {editingChallenge && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-slate-100 text-start animate-none">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                  {isEn ? 'Edit Update Post' : 'تعديل المنشور التوثيقي'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isEn 
+                    ? 'Modify the details or multi-media attachments of your family story.' 
+                    : 'تعديل البيانات والملفات المرفقة لقصة الصبر والتوثيق الخاصة بكم.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingChallenge(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable form) */}
+            <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 font-sans">
+              {editError && (
+                <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-2xl">
+                  ⚠️ {editError}
+                </div>
+              )}
+
+              {/* Edit Title */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  {isEn ? 'Post Heading Title *' : 'عنوان المنشور *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={t.chal_add_placeholder_title}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 bg-slate-50 focus:bg-white text-slate-900 text-sm outline-hidden text-start font-bold"
+                />
+              </div>
+
+              {/* Edit Text */}
+              <div className="space-y-1.5 font-sans">
+                <label className="block text-xs font-bold text-slate-700">
+                  {isEn ? 'Post Paragraph text details *' : 'المحتوى أو تفاصيل قصة التوثيق *'}
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder={t.chal_add_placeholder_text}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 bg-slate-50 focus:bg-white text-slate-900 text-sm outline-hidden resize-none leading-relaxed text-start"
+                ></textarea>
+              </div>
+
+              {/* Edit Media Attachment (Images / Videos) */}
+              <div className="space-y-3 text-start font-sans">
+                <label className="block text-xs font-bold text-slate-700">
+                  {isEn ? 'Pictures / Video Documentaries (Allows Multiple) *' : 'تحديث الصور المرفقة ومقاطع الفيديو التوثيقية (يدعم رفع صور ومقاطع فيديو) *'}
+                </label>
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOverEdit(true); }}
+                  onDragLeave={() => setIsDragOverEdit(false)}
+                  onDragEnter={() => setIsDragOverEdit(true)}
+                  onDrop={(e) => {
+                    setIsDragOverEdit(false);
+                    e.preventDefault();
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      const files = Array.from(e.dataTransfer.files) as File[];
+                      files.forEach(file => {
+                        handleFileLoad(file, (base64) => {
+                          setEditImageUrls(prev => [...prev, base64]);
+                        });
+                      });
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition flex flex-col items-center justify-center cursor-pointer ${
+                    isDragOverEdit 
+                      ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900' 
+                      : 'border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600'
+                  }`}
+                  onClick={() => document.getElementById('editFileSelector')?.click()}
+                >
+                  <input 
+                    type="file" 
+                    id="editFileSelector" 
+                    className="hidden" 
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        const files = Array.from(e.target.files) as File[];
+                        files.forEach(file => {
+                          handleFileLoad(file, (base64) => {
+                            setEditImageUrls(prev => [...prev, base64]);
+                          });
+                        });
+                      }
+                    }}
+                  />
+                  <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                  <p className="text-xs font-bold leading-relaxed">{isEn ? 'Drag & drop multiple files or click to add' : 'اسحب وأفلت عدة صور أو مقاطع فيديو للتوثيق هنا أو اضغط للاختيار من جهازك'}</p>
+                  <p className="text-[10px] text-zinc-400 mt-1">{isEn ? 'Videos must be under 2 minutes to save securely.' : 'الملفات التوثيقية. يرجى إبقاء مدة الفيديوهات أقل من دقيقتين.'}</p>
+                </div>
+
+                {/* Active list display with X to delete */}
+                {editImageUrls.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-black text-slate-500">
+                      {isEn ? `Selected Attachments (${editImageUrls.length}):` : `الملفات المدرجة حالياً في التعديل (${editImageUrls.length}):`}
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-150">
+                      {editImageUrls.map((url, idx) => {
+                        const isVid = url && (url.startsWith('data:video/') || url.includes('video/') || url.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/));
+                        return (
+                          <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
+                            {isVid ? (
+                              <video src={url} className="w-full h-full object-cover" muted />
+                            ) : (
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditImageUrls(prev => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="absolute top-1.5 right-1.5 bg-red-550 hover:bg-red-650 text-white rounded-full p-1 opacity-95 hover:opacity-100 hover:scale-105 transition active:scale-95 cursor-pointer shadow-xs z-10"
+                              title={isEn ? "Remove item" : "إزالة الملف"}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            {isVid && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                <span className="bg-white/80 rounded-full p-1 shadow-xs">
+                                  <svg className="w-3.5 h-3.5 text-slate-800" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setEditingChallenge(null)}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition rounded-2xl text-xs sm:text-sm font-bold cursor-pointer"
+              >
+                {isEn ? 'Cancel' : 'إلغاء الأمر'}
+              </button>
+              <button
+                type="button"
+                disabled={editIsSaving}
+                onClick={async () => {
+                  if (!editTitle.trim() || !editDesc.trim()) {
+                    setEditError(isEn ? 'Please fill in all required fields!' : 'يرجى ملء جميع الحقول المطلوبة!');
+                    return;
+                  }
+                  setEditIsSaving(true);
+                  setEditError(null);
+                  try {
+                    await updateChallenge(editingChallenge.id, editTitle, editDesc, editImageUrls);
+                    setEditingChallenge(null);
+                  } catch (err: any) {
+                    setEditError(err?.message || (isEn ? 'Failed to update challenge' : 'فشل تحديث المنشور'));
+                  } finally {
+                    setEditIsSaving(false);
+                  }
+                }}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white transition rounded-2xl text-xs sm:text-sm font-black disabled:opacity-50 cursor-pointer shadow-md shadow-emerald-100"
+              >
+                {editIsSaving 
+                  ? (isEn ? 'Saving edits...' : 'جاري حفظ التعديل...') 
+                  : (isEn ? 'Save Changes' : 'حفظ التعديلات الكلية')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

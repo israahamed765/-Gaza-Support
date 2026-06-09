@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSanad } from '../context/SanadContext';
-import { Heart, MessageCircle, Share2, Sparkles, BookOpen, Clock, PenTool, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Sparkles, BookOpen, Clock, PenTool, Trash2 } from 'lucide-react';
 import { translations } from '../translations';
 import { SolidarityComments } from './SolidarityComments';
 import { ImageCarousel } from './ImageCarousel';
@@ -21,8 +21,6 @@ export const DailyChallengesPage: React.FC = () => {
     addReplyToChallenge,
     deleteReplyFromChallenge
   } = useSanad();
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
   const t = translations[language];
   const isEn = language === 'en';
 
@@ -31,14 +29,6 @@ export const DailyChallengesPage: React.FC = () => {
 
   // Filter challenges to focus strictly on the active family!
   const familyChallenges = challenges.filter(c => c.beneficiaryId === (selectedFamily?.id || ''));
-
-  const handleShare = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/#challenge-${id}`);
-    setCopiedId(id);
-    setTimeout(() => {
-      setCopiedId(null);
-    }, 2000);
-  };
 
   return (
     <div className="space-y-8 py-8 px-4 max-w-4xl mx-auto text-start" id="challenges_page_view">
@@ -57,28 +47,7 @@ export const DailyChallengesPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Write a story call-to-action prompt */}
-      <div className="bg-linear-to-r from-emerald-500/10 via-teal-500/5 to-slate-50 border border-emerald-100 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6text-start" id="write_story_prompt">
-        <div className="flex items-center gap-4 text-start">
-          <div className="bg-white p-3 rounded-2xl text-emerald-600 shadow-xs ring-4 ring-emerald-55 shrink-0">
-            <PenTool className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-base sm:text-lg font-bold text-slate-800">
-              {isEn ? 'Do you have the passcode to edit this profile?' : 'هل تملك كلمة المرور لتحديث هذا الملف؟'}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-              {isEn ? 'Log in under the Families Portal to add stories, logbooks, tarps, and update receipts.' : 'قم بتسجيل الدخول كعائلة مستفيدة لتتمكن من كتابة يوميات جديدة وتحديث المتبرعين بأوضاعكم فورياً.'}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-2xl shrink-0 transition shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-        >
-          {t.mobile_login_button}
-        </button>
-      </div>
+
 
       {/* Main Feed Container */}
       <div className="space-y-8" id="challenges_social_feed">
@@ -163,13 +132,6 @@ export const DailyChallengesPage: React.FC = () => {
 
                 {/* Sharing and actions */}
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => handleShare(challenge.id)}
-                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 rounded-xl transition text-slate-500 active:scale-95 text-xs font-bold shrink-0"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>{copiedId === challenge.id ? (isEn ? 'Copied link!' : 'تم نسخ الرابط!') : (isEn ? 'Share link' : 'مشاركة القصة')}</span>
-                  </button>
                   <button
                     onClick={() => setActiveTab('needs')}
                     className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-850 rounded-xl hover:bg-emerald-100 transition text-xs font-bold shrink-0 shadow-3xs"

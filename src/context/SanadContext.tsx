@@ -30,6 +30,7 @@ interface SanadContextType {
   logout: () => void;
   updateProfile: (profile: Partial<BeneficiaryProfile>) => void;
   addChallenge: (title: string, text: string, imageUrl: string, imageUrls?: string[]) => void;
+  updateChallenge: (id: string, title: string, text: string, imageUrls: string[]) => Promise<void>;
   deleteChallenge: (id: string) => void;
   addUrgentNeed: (title: string, description: string, cost: number, imageUrl: string, crowdfundingUrl: string, imageUrls?: string[]) => void;
   deleteUrgentNeed: (id: string) => void;
@@ -129,7 +130,17 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [hopeMessages, setHopeMessages] = useState<HopeMessage[]>([]);
   const [notifications, setNotifications] = useState<SanadNotification[]>([]);
-  const [currentBeneficiary, setCurrentBeneficiary] = useState<BeneficiaryProfile | null>(null);
+  const [currentBeneficiary, setCurrentBeneficiary] = useState<BeneficiaryProfile | null>(() => {
+    const localCB = localStorage.getItem('sanad_current_beneficiary');
+    if (localCB) {
+      try {
+        return JSON.parse(localCB) as BeneficiaryProfile;
+      } catch (e) {
+        console.error("Error parsing current beneficiary on init:", e);
+      }
+    }
+    return null;
+  });
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<string>('f_slot_1');
   const [totalDonationsTracked, setTotalDonationsTracked] = useState(0);
   const [language, setLanguageState] = useState<'ar' | 'en'>('ar');
@@ -191,21 +202,35 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       setBeneficiaries(list);
 
-      // Restore active logged-in beneficiary
+      // Sync real-time updates for active logged-in session, if any, safely
       const localCB = localStorage.getItem('sanad_current_beneficiary');
       if (localCB) {
         try {
           const parsed = JSON.parse(localCB);
           const match = list.find(b => b.id === parsed.id);
           if (match) {
-            setCurrentBeneficiary(match);
+            // Only update active state if database contains different fields
+            if (JSON.stringify(match) !== JSON.stringify(parsed)) {
+              // AVOID OVERWRITING local updates mid-save or when database version is stale/cached/uninitialized
+              const isDatabaseStale = (parsed.initialized && !match.initialized) 
+                || (parsed.name && !match.name) 
+                || (parsed.username && !match.username) 
+                || (parsed.profilePicture && !match.profilePicture);
+
+              if (isDatabaseStale) {
+                console.log("Ignoring stale database snapshot to prevent resetting locally updated profile fields.");
+              } else {
+                setCurrentBeneficiary(match);
+                localStorage.setItem('sanad_current_beneficiary', JSON.stringify(match));
+              }
+            }
           }
         } catch (e) {
-          console.error("Error finding login profile match", e);
+          console.error("Error syncing login profile match from database:", e);
         }
       }
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'beneficiaries');
+      console.warn("Firestore snapshot connection issue: 'beneficiaries'. Serving from local cache: ", err);
     });
 
     // 2. Listen to needs
@@ -216,7 +241,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       setCurrentNeeds(list);
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'currentNeeds');
+      console.warn("Firestore snapshot connection issue: 'currentNeeds'. Serving from local cache: ", err);
     });
 
     // 3. Listen to challenges
@@ -229,7 +254,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       list.sort((a, b) => b.id.localeCompare(a.id));
       setChallenges(list);
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'challenges');
+      console.warn("Firestore snapshot connection issue: 'challenges'. Serving from local cache: ", err);
     });
 
     // 4. Listen to hope messages
@@ -242,7 +267,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       list.sort((a, b) => b.id.localeCompare(a.id));
       setHopeMessages(list);
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'hopeMessages');
+      console.warn("Firestore snapshot connection issue: 'hopeMessages'. Serving from local cache: ", err);
     });
 
     // 5. Listen to notifications
@@ -255,7 +280,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       list.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
       setNotifications(list);
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'notifications');
+      console.warn("Firestore snapshot connection issue: 'notifications'. Serving from local cache: ", err);
     });
 
     // Restore UI variables (language, selectedFamilyId, tracked donations)
@@ -401,6 +426,25 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await deleteDoc(doc(db, 'challenges', id));
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `challenges/${id}`);
+    }
+  };
+
+  // Update existing challenge
+  const updateChallenge = async (id: string, title: string, text: string, imageUrls: string[]) => {
+    try {
+      const challengeRef = doc(db, 'challenges', id);
+      const challengeSnap = await getDoc(challengeRef);
+      if (challengeSnap.exists()) {
+        const updateData: Partial<Challenge> = {
+          title,
+          text,
+          imageUrls: imageUrls.length > 0 ? imageUrls : ['https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?auto=format&fit=crop&q=80&w=600'],
+          imageUrl: imageUrls[0] || 'https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?auto=format&fit=crop&q=80&w=600',
+        };
+        await updateDoc(challengeRef, updateData);
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `challenges/${id}`);
     }
   };
 
@@ -836,9 +880,10 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const initializedBeneficiaries = beneficiaries.filter(b => b.initialized);
-  const selectedFamily = currentBeneficiary 
-    ? currentBeneficiary 
-    : (beneficiaries.find(b => b.id === selectedFamilyId) || beneficiaries.find(b => b.id === 'f_slot_1') || null);
+  const selectedFamily = beneficiaries.find(b => b.id === selectedFamilyId)
+    || currentBeneficiary
+    || beneficiaries.find(b => b.id === 'f_slot_1')
+    || null;
   const familyNeeds = currentNeeds.filter(n => n.beneficiaryId === (selectedFamily?.id || ''));
   const familyActiveNeedsCount = familyNeeds.filter(n => n.collectedAmount < n.cost).length;
 
@@ -866,6 +911,7 @@ export const SanadProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logout,
         updateProfile,
         addChallenge,
+        updateChallenge,
         deleteChallenge,
         addUrgentNeed,
         deleteUrgentNeed,
